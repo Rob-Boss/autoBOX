@@ -15,6 +15,16 @@ LOG_FILE="$LOG_DIR/backup-$(date +%Y-%m-%d).log"
 
 mkdir -p "$LOG_DIR"
 
+# ── Lock file: prevent duplicate concurrent runs ──────────────
+LOCKFILE="/tmp/box-backup.lock"
+if [ -f "$LOCKFILE" ] && ps -p "$(cat "$LOCKFILE")" > /dev/null 2>&1; then
+  echo "⚠️  Backup already running (PID $(cat "$LOCKFILE")). Skipping this run." | tee -a "$LOG_FILE"
+  exit 0
+fi
+echo $$ > "$LOCKFILE"
+trap 'rm -f "$LOCKFILE"' EXIT
+# ─────────────────────────────────────────────────────────────
+
 EXCLUDES=(
   # Node / JS
   --exclude "node_modules/**"
