@@ -51,7 +51,7 @@ if [ -t 1 ]; then
   echo "   Destination: $DESTINATION"
   echo ""
 
-  rclone copy "$SOURCE" "$DESTINATION" \
+  caffeinate -s rclone copy "$SOURCE" "$DESTINATION" \
     --progress \
     --transfers=4 \
     --checkers=8 \
@@ -75,7 +75,7 @@ else
   echo "Box Backup Started: $(date)" >> "$LOG_FILE"
   echo "========================================" >> "$LOG_FILE"
 
-  rclone copy "$SOURCE" "$DESTINATION" \
+  caffeinate -s rclone copy "$SOURCE" "$DESTINATION" \
     --transfers=4 \
     --checkers=8 \
     --log-level=INFO \
