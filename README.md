@@ -56,7 +56,15 @@ cp com.swardy.box-backup.plist ~/Library/LaunchAgents/
 launchctl load ~/Library/LaunchAgents/com.swardy.box-backup.plist
 ```
 
-### 5. (Optional) Create a Desktop launcher
+### 5. Schedule Mac to auto-wake at 1:55am (recommended)
+Wakes the Mac 5 minutes before the backup fires — only works when plugged into power.
+```bash
+sudo pmset repeat wake MTWRFSU 01:55:00
+```
+To verify: `pmset -g sched`
+To cancel: `sudo pmset repeat cancel`
+
+### 6. (Optional) Create a Desktop launcher
 ```bash
 osacompile -o ~/Desktop/Box\ Backup.app << 'EOF'
 tell application "Terminal"
