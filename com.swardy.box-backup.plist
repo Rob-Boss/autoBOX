@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.swardy.box-backup</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>/Users/swardy/scripts/box-backup.sh</string>
+    </array>
+
+    <!-- Run daily at 2:00 AM -->
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key>
+        <integer>2</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+
+    <key>StandardOutPath</key>
+    <string>/Users/swardy/Library/Logs/box-backup/launchd-stdout.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/swardy/Library/Logs/box-backup/launchd-stderr.log</string>
+
+    <!-- Do NOT run immediately on load, only on schedule -->
+    <key>RunAtLoad</key>
+    <false/>
+</dict>
+</plist>
