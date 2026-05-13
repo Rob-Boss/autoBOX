@@ -64,35 +64,34 @@ sudo pmset repeat wake MTWRFSU 01:55:00
 To verify: `pmset -g sched`
 To cancel: `sudo pmset repeat cancel`
 
-### 6. (Optional) Create a Desktop launcher
-```bash
-osacompile -o ~/Desktop/Box\ Backup.app << 'EOF'
-tell application "Terminal"
-    activate
-    do script "/Users/swardy/scripts/box-backup.sh"
-end tell
-EOF
-```
-Drag it to your Dock for one-click manual backups.
+### 6. Create the Desktop Tools
+I've created a folder on your Desktop called **Box Backup Tools** with these "one-click" apps:
+
+1.  **Manual Backup.app**: Runs the backup script immediately in a visible Terminal window so you can see the live progress bar.
+2.  **Watch Progress.app**: Opens a Terminal that tails the current log file. Use this to check on a nightly backup that is already running.
+3.  **Cancel Backup.app**: Forces any running backup to stop and clears the "already running" lock file. Use this if a backup hangs or you need to stop it immediately.
+4.  **View Logs.app**: Opens the `~/Library/Logs/box-backup/` folder in Finder.
+
+Drag this folder to your Dock (on the right side near the Trash) to have a "pop-up" menu of your backup tools.
 
 ---
 
 ## Manual Backup
 
-Double-click **Box Backup.app** in your Dock, or run:
+Double-click **Manual Backup.app** or run:
 ```bash
 ~/scripts/box-backup.sh
 ```
 
 ## Watch a Running Backup
+
+Double-click **Watch Progress.app** or run:
 ```bash
 tail -f ~/Library/Logs/box-backup/backup-$(date +%Y-%m-%d).log
 ```
 
-## Run Without Keeping Terminal Open
-```bash
-nohup ~/scripts/box-backup.sh &
-```
+> [!TIP]
+> Pressing `Ctrl+C` in the "Watch Progress" window only stops the *viewing* of the log. To actually stop the backup process itself, use the **Cancel Backup.app**.
 
 ---
 
@@ -101,6 +100,8 @@ nohup ~/scripts/box-backup.sh &
 | File | Installed Location |
 |---|---|
 | `box-backup.sh` | `~/scripts/box-backup.sh` |
+| `cancel-backup.sh` | `~/scripts/cancel-backup.sh` |
 | `com.swardy.box-backup.plist` | `~/Library/LaunchAgents/com.swardy.box-backup.plist` |
 | Logs | `~/Library/Logs/box-backup/` |
 | Box destination | `box:Docs-Daily/` |
+| Desktop Tools | `~/Desktop/Box Backup Tools/` |

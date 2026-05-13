@@ -26,16 +26,12 @@ trap 'rm -f "$LOCKFILE"' EXIT
 # ─────────────────────────────────────────────────────────────
 
 EXCLUDES=(
-  # Node / JS
   --exclude "node_modules/**"
-  # Git history (already on GitHub)
   --exclude ".git/**"
-  # Python virtual environments
   --exclude ".venv/**"
   --exclude "venv/**"
   --exclude "*-venv/**"
   --exclude "*.venv/**"
-  # Build output & caches
   --exclude ".DS_Store"
   --exclude "*.cache"
   --exclude "__pycache__/**"
@@ -44,53 +40,91 @@ EXCLUDES=(
   --exclude ".astro/**"
 )
 
-if [ -t 1 ]; then
-  # ── Interactive (manual run) ──────────────────────────────
-  echo "📦 Box Backup Starting..."
-  echo "   Source:      $SOURCE"
-  echo "   Destination: $DESTINATION"
-  echo ""
+# Resilience Settings
+MAX_RETRIES=4
+RETRY_DELAY=30
+TIMEOUT_FLAGS="--timeout 5m --contimeout 1m"
 
-  caffeinate -s rclone copy "$SOURCE" "$DESTINATION" \
-    --progress \
-    --transfers=4 \
-    --checkers=8 \
+run_backup() {
+  local attempt=$1
+  local mode_tag=$2
+
+  # Common rclone flags
+  local rclone_args=(
+    "copy" "$SOURCE" "$DESTINATION"
+    --transfers=4
+    --checkers=8
+    --log-level=INFO
+    --log-file="$LOG_FILE"
+    $TIMEOUT_FLAGS
     "${EXCLUDES[@]}"
+  )
 
+  if [ -t 1 ]; then
+    # ── Interactive Mode ──────────────────────────────
+    if [ $attempt -gt 1 ]; then echo "🔄 Retry Attempt $attempt/$MAX_RETRIES..."; fi
+    
+    caffeinate -s rclone "${rclone_args[@]}" --progress
+  else
+    # ── Headless Mode ─────────────────────────────────
+    echo "Attempt $attempt Started ($mode_tag): $(date)" >> "$LOG_FILE"
+    
+    caffeinate -s rclone "${rclone_args[@]}" --stats=60s --stats-one-line
+  fi
+}
+
+# ── Main Loop ────────────────────────────────────────────────
+SUCCESS=false
+MODE="SCHEDULED"
+if [ -t 1 ]; then MODE="MANUAL"; fi
+
+for ((i=1; i<=MAX_RETRIES; i++)); do
+  if [ $i -eq 1 ]; then
+    echo "========================================" >> "$LOG_FILE"
+    echo "Box Backup Started [$MODE]: $(date)" >> "$LOG_FILE"
+    echo "========================================" >> "$LOG_FILE"
+    
+    if [ "$MODE" = "MANUAL" ]; then
+      echo "📦 Box Backup Starting..."
+      echo "   Source:      $SOURCE"
+      echo "   Destination: $DESTINATION"
+      echo "   Log File:    $LOG_FILE"
+      echo ""
+    fi
+  fi
+
+  run_backup $i "$MODE"
   EXIT_CODE=$?
 
   if [ $EXIT_CODE -eq 0 ]; then
-    echo ""
-    echo "✅ Backup completed: $(date)"
-    osascript -e 'display notification "Documents backed up to Box successfully." with title "📦 Box Backup Complete" sound name "Glass"'
+    SUCCESS=true
+    break
   else
-    echo ""
-    echo "❌ Backup failed (exit code $EXIT_CODE)"
-    osascript -e 'display notification "Backup failed. Check terminal for details." with title "⚠️ Box Backup Failed" sound name "Basso"'
+    if [ $i -lt $MAX_RETRIES ]; then
+      echo "❌ Attempt $i failed (code $EXIT_CODE). Retrying in ${RETRY_DELAY}s..." | tee -a "$LOG_FILE"
+      sleep $RETRY_DELAY
+    fi
   fi
+done
 
+# ── Final Status ─────────────────────────────────────────────
+if [ "$SUCCESS" = true ]; then
+  FINAL_MSG="✅ Backup completed successfully: $(date)"
+  echo "$FINAL_MSG" >> "$LOG_FILE"
+  
+  if [ "$MODE" = "MANUAL" ]; then
+    echo ""
+    echo "$FINAL_MSG"
+  fi
+  osascript -e 'display notification "Documents backed up to Box successfully." with title "📦 Box Backup Complete" sound name "Glass"'
 else
-  # ── Headless (launchd nightly run) ───────────────────────
-  echo "========================================" >> "$LOG_FILE"
-  echo "Box Backup Started: $(date)" >> "$LOG_FILE"
-  echo "========================================" >> "$LOG_FILE"
+  FINAL_MSG="🚫 Backup failed after $MAX_RETRIES attempts: $(date)"
+  echo "$FINAL_MSG" >> "$LOG_FILE"
 
-  caffeinate -s rclone copy "$SOURCE" "$DESTINATION" \
-    --transfers=4 \
-    --checkers=8 \
-    --log-level=INFO \
-    --log-file="$LOG_FILE" \
-    --stats=60s \
-    --stats-one-line \
-    "${EXCLUDES[@]}"
-
-  EXIT_CODE=$?
-
-  if [ $EXIT_CODE -eq 0 ]; then
-    echo "✅ Backup completed: $(date)" >> "$LOG_FILE"
-    osascript -e 'display notification "Documents backed up to Box successfully." with title "📦 Box Backup Complete" sound name "Glass"'
-  else
-    echo "❌ Backup failed (exit code $EXIT_CODE): $(date)" >> "$LOG_FILE"
-    osascript -e 'display notification "Check ~/Library/Logs/box-backup for details." with title "⚠️ Box Backup Failed" sound name "Basso"'
+  if [ "$MODE" = "MANUAL" ]; then
+    echo ""
+    echo "$FINAL_MSG"
   fi
+  osascript -e 'display notification "Backup failed after multiple attempts." with title "⚠️ Box Backup Failed" sound name "Basso"'
+  exit 1
 fi
