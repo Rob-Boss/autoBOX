@@ -64,12 +64,12 @@ run_backup() {
     # ── Interactive Mode ──────────────────────────────
     if [ $attempt -gt 1 ]; then echo "🔄 Retry Attempt $attempt/$MAX_RETRIES..."; fi
     
-    caffeinate -s rclone "${rclone_args[@]}" --progress
+    caffeinate -i rclone "${rclone_args[@]}" --progress
   else
     # ── Headless Mode ─────────────────────────────────
     echo "Attempt $attempt Started ($mode_tag): $(date)" >> "$LOG_FILE"
     
-    caffeinate -s rclone "${rclone_args[@]}" --stats=60s --stats-one-line
+    caffeinate -i rclone "${rclone_args[@]}" --stats=60s --stats-one-line
   fi
 }
 
@@ -79,6 +79,24 @@ MODE="SCHEDULED"
 if [ -t 1 ]; then MODE="MANUAL"; fi
 
 for ((i=1; i<=MAX_RETRIES; i++)); do
+  # ── Battery Check ───────────────────────────────────────────
+  if pmset -g batt | grep -q "InternalBattery"; then
+    BATTERY_PCT=$(pmset -g batt | grep -o '[0-9]*%' | tr -d '%')
+    IS_CHARGING=$(pmset -g batt | grep -q 'AC Power' && echo "yes" || echo "no")
+    
+    if [ "$IS_CHARGING" = "no" ] && [ -n "$BATTERY_PCT" ] && [ "$BATTERY_PCT" -lt 5 ]; then
+      ABORT_MSG="🔋 Battery at ${BATTERY_PCT}%. Aborting backup to save power."
+      echo "$ABORT_MSG" >> "$LOG_FILE"
+      if [ "$MODE" = "MANUAL" ]; then
+        echo ""
+        echo "$ABORT_MSG"
+      fi
+      osascript -e 'display notification "Battery too low ('"$BATTERY_PCT"'%). Backup aborted." with title "⚠️ Box Backup Aborted" sound name "Basso"'
+      exit 1
+    fi
+  fi
+  # ─────────────────────────────────────────────────────────────
+
   if [ $i -eq 1 ]; then
     echo "========================================" >> "$LOG_FILE"
     echo "Box Backup Started [$MODE]: $(date)" >> "$LOG_FILE"

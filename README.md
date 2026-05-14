@@ -6,6 +6,7 @@ Automated daily backup of `~/Documents` to Box.com using **rclone** + **macOS la
 - ✅ Only uploads new/changed files — not a full re-upload every night
 - ✅ Runs silently at **2:00 AM** via launchd
 - ✅ **Self-healing**: Automatically retries 4x if the connection hangs or fails
+- ✅ **Battery Aware**: Prevents idle sleep during backup, and aborts if unplugged and battery drops below 5%
 - ✅ **Unified Logs**: Every run (manual or scheduled) is recorded in a daily log file
 - ✅ **Desktop Tools**: One-click apps for managing, watching, and cancelling backups
 - ✅ macOS notification on success or failure
