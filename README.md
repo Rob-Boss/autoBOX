@@ -54,6 +54,11 @@ cp box-backup.sh ~/scripts/box-backup.sh
 chmod +x ~/scripts/box-backup.sh
 ```
 
+> [!WARNING]
+> **macOS Permissions (TCC) Rule:** You MUST use a hard copy (`cp`) for the script in `~/scripts/`. Do NOT use a symlink (`ln -s`) pointing to the script in your `Documents` folder. macOS will block `launchd` from reading symlinks inside protected folders like `Documents` and the backup will fail to start silently. 
+> 
+> **Updating:** If you edit `box-backup.sh` in this project folder, you must manually run the `cp` command above again to deploy your changes.
+
 ### 4. Install the launchd scheduler
 ```bash
 cp com.swardy.box-backup.plist ~/Library/LaunchAgents/
